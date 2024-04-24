@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/NVIDIA/go-nvml/pkg/nvml/mock/dgxa100"
-	resourceapi "k8s.io/api/resource/v1alpha2"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
 
 	nvdevicelib "github.com/klueska/nvk8s-resourcemodel/pkg/nvdevice"
+	currentresourceapi "github.com/klueska/nvk8s-resourcemodel/pkg/resource/current"
 )
 
 // Main queries the list of allocatable devices and prints them as a kubernetes
@@ -25,10 +25,18 @@ func main() {
 		klog.Fatalf("Error getAllocatableDevices: %v", err)
 	}
 
+	// Print the current structured resource model.
+	if err := printCurrentResourceModel(allocatable); err != nil {
+		klog.Fatalf("Error printCurrentResourceModel: %v", err)
+	}
+}
+
+// printCurrentResourceModel prints the current structured resource model as yaml.
+func printCurrentResourceModel(allocatable nvdevicelib.AllocatableDevices) error {
 	// Build a structured resource model from the list of allocatable devices.
-	instances := allocatable.ToNamedResourceInstances()
-	model := resourceapi.ResourceModel{
-		NamedResources: &resourceapi.NamedResourcesResources{Instances: instances},
+	instances := currentresourceapi.AllocatableDevices(allocatable).ToNamedResourceInstances()
+	model := currentresourceapi.ResourceModel{
+		NamedResources: &currentresourceapi.NamedResourcesResources{Instances: instances},
 	}
 
 	// Print the structured resource model as yaml.
@@ -37,4 +45,6 @@ func main() {
 		klog.Fatalf("Error marshaling resource model to yaml: %v", err)
 	}
 	fmt.Printf("%v", string(modelYaml))
+
+	return nil
 }
