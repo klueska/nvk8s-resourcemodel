@@ -34,6 +34,7 @@ type GpuInfo struct {
 	CudaDriverVersion     string
 	MigCapable            bool
 	MigEnabled            bool
+	Attributes            nvml.DeviceAttributes
 }
 
 // MigInfo holds all of the relevant information about a MIG device.
@@ -101,16 +102,20 @@ func (l NVDeviceLib) GetAllocatableDevices(indices ...int) (AllocatableDevices, 
 		if err != nil {
 			return fmt.Errorf("error getting info for GPU %v: %w", i, err)
 		}
+
+		migInfos, err := l.getMigInfos(d)
+		if err != nil {
+			return fmt.Errorf("error getting MIG info for GPU %v: %w", i, err)
+		}
+
+		l.setDeviceAttributes(gpuInfo, migInfos)
+
 		allocatable = append(allocatable,
 			AllocatableDevice{
 				Gpu: gpuInfo,
 			},
 		)
 
-		migInfos, err := l.getMigInfos(d)
-		if err != nil {
-			return fmt.Errorf("error getting MIG info for GPU %v: %w", i, err)
-		}
 		for _, migInfo := range migInfos {
 			migInfo.Parent = gpuInfo
 			allocatable = append(allocatable,
@@ -189,9 +194,29 @@ func (l NVDeviceLib) getGpuInfo(index int, device nvdev.Device) (*GpuInfo, error
 		CudaDriverVersion:     fmt.Sprintf("%v.%v", cudaDriverVersion/1000, (cudaDriverVersion%1000)/10),
 		MigCapable:            migCapable,
 		MigEnabled:            migEnabled,
+		Attributes:            nvml.DeviceAttributes{},
 	}
 
 	return gpuInfo, nil
+}
+
+// setDeviceAttributes sets each device attribute as the max from any of its migInfo's GIProfileInfos.
+func (l NVDeviceLib) setDeviceAttributes(gpuInfo *GpuInfo, migInfos []*MigInfo) {
+	for _, migInfo := range migInfos {
+		setIfGreater(&gpuInfo.Attributes.MultiprocessorCount, &migInfo.GIProfileInfo.MultiprocessorCount)
+		setIfGreater(&gpuInfo.Attributes.SharedCopyEngineCount, &migInfo.GIProfileInfo.CopyEngineCount)
+		setIfGreater(&gpuInfo.Attributes.SharedDecoderCount, &migInfo.GIProfileInfo.DecoderCount)
+		setIfGreater(&gpuInfo.Attributes.SharedEncoderCount, &migInfo.GIProfileInfo.EncoderCount)
+		setIfGreater(&gpuInfo.Attributes.SharedJpegCount, &migInfo.GIProfileInfo.JpegCount)
+		setIfGreater(&gpuInfo.Attributes.SharedOfaCount, &migInfo.GIProfileInfo.OfaCount)
+		setIfGreater(&gpuInfo.Attributes.GpuInstanceSliceCount, &migInfo.GIProfileInfo.SliceCount)
+		setIfGreater(&gpuInfo.Attributes.MemorySizeMB, &migInfo.GIProfileInfo.MemorySizeMB)
+	}
+}
+func setIfGreater[T uint32 | uint64](first *T, second *T) {
+	if *first < *second {
+		*first = *second
+	}
 }
 
 // getMigInfos returns a list of MigInfos for the GPU represented by device.
