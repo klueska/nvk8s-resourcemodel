@@ -98,6 +98,9 @@ func (devices AllocatableDevices) ToSharedLimits() NamedResourcesGroup {
 		if device.Mig != nil {
 			resources = (*MigInfo)(device.Mig).getResources()
 		}
+		if len(limits.Name) == 0 {
+			limits.Name = resources.Name
+		}
 		for _, q := range resources.Quantities {
 			limits.addOrReplaceQuantityIfLarger(&q)
 		}
