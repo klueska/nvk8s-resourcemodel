@@ -25,17 +25,6 @@ type GpuInfo nvdevicelib.GpuInfo
 // MigInfo is an alias of nvdevicelib.MigInfo
 type MigInfo nvdevicelib.MigInfo
 
-// consumableQuantities is an internal type for storing the quantifiable resources of a device.
-type consumableQuantities struct {
-	MultiprocessorCount int64
-	CopyEngineCount     int64
-	DecoderCount        int64
-	EncoderCount        int64
-	JpegCount           int64
-	OfaCount            int64
-	MemoryBytes         int64
-}
-
 // ToNamedResourceInstances converts a list of PerGpuAllocatableDevices to a list of NamedResourcesInstances.
 func (devices PerGpuAllocatableDevices) ToNamedResourceInstances() []NamedResourcesInstance {
 	var instances []NamedResourcesInstance
@@ -67,27 +56,58 @@ func (devices AllocatableDevices) ToNamedResourceInstances() []NamedResourcesIns
 func (devices PerGpuAllocatableDevices) ToSharedLimits() []NamedResourcesGroup {
 	var limits []NamedResourcesGroup
 	for _, perGpuDevices := range devices {
-		limits = slices.Concat(limits, AllocatableDevices(perGpuDevices).ToSharedLimits())
+		limits = append(limits, AllocatableDevices(perGpuDevices).ToSharedLimits())
 	}
 	return limits
 }
 
-// ToSharedLimits converts a list of AllocatableDevices to a list of NamedResourcesGroups shared resource limits.
-func (devices AllocatableDevices) ToSharedLimits() []NamedResourcesGroup {
-	var allLimits []NamedResourcesGroup
+// ToSharedLimits converts a list of AllocatableDevices to a NamedResourcesGroup of shared resource limits.
+func (devices AllocatableDevices) ToSharedLimits() NamedResourcesGroup {
+	var limits NamedResourcesGroup
 	for _, device := range devices {
-		var limits []NamedResourcesGroup
-		if device.Mig != nil {
-			continue
-		}
+		var resources NamedResourcesGroup
 		if device.Gpu != nil {
-			limits = (*GpuInfo)(device.Gpu).getResources()
+			resources = (*GpuInfo)(device.Gpu).getResources()
 		}
-		if limits != nil {
-			allLimits = slices.Concat(allLimits, limits)
+		if device.Mig != nil {
+			resources = (*MigInfo)(device.Mig).getResources()
+		}
+		for _, q := range resources.Quantities {
+			limits.addOrReplaceQuantityIfLarger(&q)
+		}
+		for _, s := range resources.IntSets {
+			limits.addOrReplaceIntSetIfLarger(&s)
 		}
 	}
-	return allLimits
+	return limits
+}
+
+// addOrReplaceQuantityIfLarger is an internal function to conditionally update Quantities in a NamedResourcesGroup.
+func (g *NamedResourcesGroup) addOrReplaceQuantityIfLarger(q *NamedResourcesQuantity) {
+	for i := range g.Quantities {
+		if q.Name == g.Quantities[i].Name {
+			if q.Value.Cmp(*g.Quantities[i].Value) > 0 {
+				*g.Quantities[i].Value = *q.Value
+			}
+			return
+		}
+	}
+	g.Quantities = append(g.Quantities, *q)
+}
+
+// addOrReplaceIntSetIfLarger is an internal function to conditionally update IntSets in a NamedResourcesGroup.
+func (g *NamedResourcesGroup) addOrReplaceIntSetIfLarger(s *NamedResourcesSet[int]) {
+	for i := range g.IntSets {
+		if s.Name == g.IntSets[i].Name {
+			for _, item := range s.Items {
+				if !slices.Contains(g.IntSets[i].Items, item) {
+					g.IntSets[i].Items = append(g.IntSets[i].Items, item)
+				}
+			}
+			return
+		}
+	}
+	g.IntSets = append(g.IntSets, *s)
 }
 
 // ToNamedResourcesInstance converts a GpuInfo object to a NamedResourcesInstance.
@@ -104,10 +124,14 @@ func (gpu *GpuInfo) ToNamedResourcesInstance() *NamedResourcesInstance {
 		}
 	}
 
+	resources := []NamedResourcesGroup{
+		(*GpuInfo)(gpu).getResources(),
+	}
+
 	newInstance := &NamedResourcesInstance{
 		Name:       currentInstance.Name,
 		Attributes: attributes,
-		Resources:  (*GpuInfo)(gpu).getResources(),
+		Resources:  resources,
 	}
 
 	return newInstance
@@ -132,114 +156,92 @@ func (mig *MigInfo) ToNamedResourcesInstance() *NamedResourcesInstance {
 		}
 	}
 
+	resources := []NamedResourcesGroup{
+		(*MigInfo)(mig).getResources(),
+	}
+
 	name := fmt.Sprintf("%s-mig-%s-%d", parentInstance.Name, mig.Profile, mig.MemorySlices.Start)
+
 	instance := &NamedResourcesInstance{
 		Name:       toRFC1123Compliant(name),
 		Attributes: attributes,
-		Resources:  (*MigInfo)(mig).getResources(),
+		Resources:  resources,
 	}
 
 	return instance
 }
 
 // getResources gets the set of shared resources consumed by the GPU.
-func (gpu *GpuInfo) getResources() []NamedResourcesGroup {
-	quantities := consumableQuantities{
-		MultiprocessorCount: int64(gpu.Attributes.MultiprocessorCount),
-		CopyEngineCount:     int64(gpu.Attributes.SharedCopyEngineCount),
-		DecoderCount:        int64(gpu.Attributes.SharedDecoderCount),
-		EncoderCount:        int64(gpu.Attributes.SharedEncoderCount),
-		JpegCount:           int64(gpu.Attributes.SharedJpegCount),
-		OfaCount:            int64(gpu.Attributes.SharedOfaCount),
-		MemoryBytes:         int64(gpu.MemoryBytes),
-	}
+func (gpu *GpuInfo) getResources() NamedResourcesGroup {
+	name := fmt.Sprintf("gpu-%v-shared-resources", gpu.Index)
 
-	var mslices []int
-	for i := 0; i < int(gpu.Attributes.MemorySlices.Size); i++ {
-		mslices = append(mslices, int(gpu.Attributes.MemorySlices.Start)+i)
-	}
-
-	mslicesSet := NamedResourcesSet[int]{
-		Name:  "memory-slices",
-		Items: mslices,
-	}
-
-	group := []NamedResourcesGroup{
+	quantities := []NamedResourcesQuantity{
 		{
-			Name:       fmt.Sprintf("gpu-%v-shared-resources", gpu.Index),
-			Quantities: quantities.ToNamedResourcesQuantities(),
-			IntSets:    []NamedResourcesSet[int]{mslicesSet},
+			Name:  "memory",
+			Value: resource.NewQuantity(int64(gpu.MemoryBytes), resource.BinarySI),
 		},
+	}
+
+	group := NamedResourcesGroup{
+		Name:       name,
+		Quantities: quantities,
 	}
 
 	return group
 }
 
 // getResources gets the set of shared resources consumed by the MIG device.
-func (mig *MigInfo) getResources() []NamedResourcesGroup {
-	quantities := consumableQuantities{
-		MultiprocessorCount: int64(mig.GIProfileInfo.MultiprocessorCount),
-		CopyEngineCount:     int64(mig.GIProfileInfo.CopyEngineCount),
-		DecoderCount:        int64(mig.GIProfileInfo.DecoderCount),
-		EncoderCount:        int64(mig.GIProfileInfo.EncoderCount),
-		JpegCount:           int64(mig.GIProfileInfo.JpegCount),
-		OfaCount:            int64(mig.GIProfileInfo.OfaCount),
-		MemoryBytes:         int64(mig.GIProfileInfo.MemorySizeMB * 1024 * 1024),
-	}
+func (mig *MigInfo) getResources() NamedResourcesGroup {
+	name := fmt.Sprintf("gpu-%v-shared-resources", mig.Parent.Index)
 
-	var mslices []int
-	for i := 0; i < int(mig.MemorySlices.Size); i++ {
-		mslices = append(mslices, int(mig.MemorySlices.Start)+i)
-	}
-
-	mslicesSet := NamedResourcesSet[int]{
-		Name:  "memory-slices",
-		Items: mslices,
-	}
-
-	group := []NamedResourcesGroup{
-		{
-			Name:       fmt.Sprintf("gpu-%v-shared-resources", mig.Parent.Index),
-			Quantities: quantities.ToNamedResourcesQuantities(),
-			IntSets:    []NamedResourcesSet[int]{mslicesSet},
-		},
-	}
-	return group
-}
-
-// ToNamedResourcesQuantities converts consumableQuantities to a list of NamedResourcesQuantities.
-func (c *consumableQuantities) ToNamedResourcesQuantities() []NamedResourcesQuantity {
+	info := mig.GIProfileInfo
 	quantities := []NamedResourcesQuantity{
 		{
 			Name:  "multiprocessors",
-			Value: resource.NewQuantity(c.MultiprocessorCount, resource.BinarySI),
+			Value: resource.NewQuantity(int64(info.MultiprocessorCount), resource.BinarySI),
 		},
 		{
 			Name:  "copy-engines",
-			Value: resource.NewQuantity(c.CopyEngineCount, resource.BinarySI),
+			Value: resource.NewQuantity(int64(info.CopyEngineCount), resource.BinarySI),
 		},
 		{
 			Name:  "decoders",
-			Value: resource.NewQuantity(c.DecoderCount, resource.BinarySI),
+			Value: resource.NewQuantity(int64(info.DecoderCount), resource.BinarySI),
 		},
 		{
 			Name:  "encoders",
-			Value: resource.NewQuantity(c.EncoderCount, resource.BinarySI),
+			Value: resource.NewQuantity(int64(info.EncoderCount), resource.BinarySI),
 		},
 		{
 			Name:  "jpeg-engines",
-			Value: resource.NewQuantity(c.JpegCount, resource.BinarySI),
+			Value: resource.NewQuantity(int64(info.JpegCount), resource.BinarySI),
 		},
 		{
 			Name:  "ofa-engines",
-			Value: resource.NewQuantity(c.OfaCount, resource.BinarySI),
+			Value: resource.NewQuantity(int64(info.OfaCount), resource.BinarySI),
 		},
 		{
 			Name:  "memory",
-			Value: resource.NewQuantity(c.MemoryBytes, resource.BinarySI),
+			Value: resource.NewQuantity(int64(info.MemorySizeMB*1024*1024), resource.BinarySI),
 		},
 	}
-	return quantities
+
+	var memorySlices []int
+	for i := 0; i < int(mig.MemorySlices.Size); i++ {
+		memorySlices = append(memorySlices, int(mig.MemorySlices.Start)+i)
+	}
+	memorySlicesSet := NamedResourcesSet[int]{
+		Name:  "memory-slices",
+		Items: memorySlices,
+	}
+
+	group := NamedResourcesGroup{
+		Name:       name,
+		Quantities: quantities,
+		IntSets:    []NamedResourcesSet[int]{memorySlicesSet},
+	}
+
+	return group
 }
 
 // toRFC1123Compliant converts the incoming string to a valid RFC1123 DNS domain name.
