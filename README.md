@@ -19,7 +19,7 @@ namedResources:
     - int: 0
       name: index
     - name: uuid
-      string: GPU-650f49e1-eb8f-4d88-8756-776ef8f06151
+      string: GPU-0d8e6e00-ed08-4c40-bfa5-d01055cac69c
     - name: memory
       quantity: 40Gi
     - name: product-name
@@ -49,7 +49,7 @@ namedResources:
     - int: 0
       name: index
     - name: uuid
-      string: GPU-650f49e1-eb8f-4d88-8756-776ef8f06151
+      string: GPU-0d8e6e00-ed08-4c40-bfa5-d01055cac69c
     - name: product-name
       string: Mock NVIDIA A100-SXM4-40GB
     - name: brand
@@ -68,31 +68,8 @@ namedResources:
       name: mig-enabled
     name: gpu-0
     resources:
-    - intSets:
-      - items:
-        - 0
-        - 1
-        - 2
-        - 3
-        - 4
-        - 5
-        - 6
-        - 7
-        name: memory-slices
-      name: gpu-0-shared-resources
+    - name: gpu-0-shared-resources
       quantities:
-      - name: multiprocessors
-        value: "98"
-      - name: copy-engines
-        value: "7"
-      - name: decoders
-        value: "5"
-      - name: encoders
-        value: "0"
-      - name: jpeg-engines
-        value: "1"
-      - name: ofa-engines
-        value: "1"
       - name: memory
         value: 40Gi
   - attributes:
@@ -1055,8 +1032,10 @@ namedResources:
       - 6
       - 7
       name: memory-slices
-    name: gpu-0-shared-resources
+    name: ""
     quantities:
+    - name: memory
+      value: 40Gi
     - name: multiprocessors
       value: "98"
     - name: copy-engines
@@ -1069,6 +1048,4 @@ namedResources:
       value: "1"
     - name: ofa-engines
       value: "1"
-    - name: memory
-      value: 40Gi
 ```
