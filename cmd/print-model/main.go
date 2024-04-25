@@ -43,40 +43,22 @@ func main() {
 
 // printCurrentResourceModel prints the current structured resource model as yaml.
 func printCurrentResourceModel(allocatable nvdevicelib.PerGpuAllocatableDevices) error {
-	// Build a structured resource model from the list of allocatable devices.
-	instances := currentresourceapi.PerGpuAllocatableDevices(allocatable).ToNamedResourceInstances()
-	model := currentresourceapi.ResourceModel{
-		NamedResources: &currentresourceapi.NamedResourcesResources{Instances: instances},
-	}
-
-	// Print the structured resource model as yaml.
+	model := currentresourceapi.PerGpuAllocatableDevices(allocatable).ToNamedResourcesResourceModel()
 	modelYaml, err := yaml.Marshal(model)
 	if err != nil {
 		klog.Fatalf("Error marshaling resource model to yaml: %v", err)
 	}
 	fmt.Printf("%v", string(modelYaml))
-
 	return nil
 }
 
 // printCurrentResourceModel prints the new structured resource model as yaml.
 func printNewResourceModel(allocatable nvdevicelib.PerGpuAllocatableDevices) error {
-	// Build a structured resource model from the list of allocatable devices.
-	instances := newresourceapi.PerGpuAllocatableDevices(allocatable).ToNamedResourceInstances()
-	sharedLimits := newresourceapi.PerGpuAllocatableDevices(allocatable).ToSharedLimits()
-	model := newresourceapi.ResourceModel{
-		NamedResources: &newresourceapi.NamedResourcesResources{
-			Instances:    instances,
-			SharedLimits: sharedLimits,
-		},
-	}
-
-	// Print the structured resource model as yaml.
+	model := newresourceapi.PerGpuAllocatableDevices(allocatable).ToNamedResourcesResourceModel()
 	modelYaml, err := yaml.Marshal(model)
 	if err != nil {
 		klog.Fatalf("Error marshaling resource model to yaml: %v", err)
 	}
 	fmt.Printf("%v", string(modelYaml))
-
 	return nil
 }

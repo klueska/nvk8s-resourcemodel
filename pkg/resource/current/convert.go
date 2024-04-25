@@ -22,6 +22,24 @@ type GpuInfo nvdevicelib.GpuInfo
 // MigInfo is an alias of nvdevicelib.MigInfo
 type MigInfo nvdevicelib.MigInfo
 
+// ToNamedResourcesResourceModel converts a list of PerGpuAllocatableDevices to a NamedResources ResourceModel.
+func (devices PerGpuAllocatableDevices) ToNamedResourcesResourceModel() ResourceModel {
+	instances := devices.ToNamedResourceInstances()
+	model := ResourceModel{
+		NamedResources: &NamedResourcesResources{Instances: instances},
+	}
+	return model
+}
+
+// ToNamedResourcesResourceModel converts a list of AllocatableDevices to a NamedResources ResourceModel.
+func (devices AllocatableDevices) ToNamedResourcesResourceModel() ResourceModel {
+	instances := devices.ToNamedResourceInstances()
+	model := ResourceModel{
+		NamedResources: &NamedResourcesResources{Instances: instances},
+	}
+	return model
+}
+
 // ToNamedResourceInstances converts a list of PerGpuAllocatableDevices to a list of NamedResourcesInstances.
 func (devices PerGpuAllocatableDevices) ToNamedResourceInstances() []NamedResourcesInstance {
 	var instances []NamedResourcesInstance
