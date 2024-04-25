@@ -112,7 +112,7 @@ func (l NVDeviceLib) GetPerGpuAllocatableDevices(indices ...int) (PerGpuAllocata
 			return fmt.Errorf("error getting info for GPU %v: %w", i, err)
 		}
 
-		migInfos, err := l.getMigInfos(d)
+		migInfos, err := l.getMigInfos(gpuInfo, d)
 		if err != nil {
 			return fmt.Errorf("error getting MIG info for GPU %v: %w", i, err)
 		}
@@ -124,7 +124,6 @@ func (l NVDeviceLib) GetPerGpuAllocatableDevices(indices ...int) (PerGpuAllocata
 			},
 		}
 		for _, migInfo := range migInfos {
-			migInfo.Parent = gpuInfo
 			migDevice := AllocatableDevice{
 				Mig: migInfo,
 			}
@@ -229,7 +228,7 @@ func setIfGreater[T uint32 | uint64](first *T, second *T) {
 }
 
 // getMigInfos returns a list of MigInfos for the GPU represented by device.
-func (l NVDeviceLib) getMigInfos(device nvdev.Device) ([]*MigInfo, error) {
+func (l NVDeviceLib) getMigInfos(gpuInfo *GpuInfo, device nvdev.Device) ([]*MigInfo, error) {
 	var migInfos []*MigInfo
 	err := device.VisitMigProfiles(func(migProfile nvdev.MigProfile) error {
 		if migProfile.GetInfo().C != migProfile.GetInfo().G {
@@ -264,7 +263,7 @@ func (l NVDeviceLib) getMigInfos(device nvdev.Device) ([]*MigInfo, error) {
 
 		for _, giPlacement := range giPlacements {
 			migInfo := &MigInfo{
-				Parent:        nil,
+				Parent:        gpuInfo,
 				Profile:       migProfile,
 				GIProfileInfo: giProfileInfo,
 				MemorySlices:  giPlacement,
