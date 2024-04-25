@@ -20,7 +20,7 @@ func main() {
 	l := nvdevicelib.New(dgxa100.New())
 
 	// Get the full list of allocatable devices from the server.
-	allocatable, err := l.GetAllocatableDevices()
+	allocatable, err := l.GetAllocatableDevices(0)
 	if err != nil {
 		klog.Fatalf("Error getAllocatableDevices: %v", err)
 	}
