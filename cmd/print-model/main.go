@@ -21,7 +21,7 @@ func main() {
 	l := nvdevicelib.New(dgxa100.New())
 
 	// Get the full list of allocatable devices from the server.
-	allocatable, err := l.GetAllocatableDevices(0)
+	allocatable, err := l.GetPerGpuAllocatableDevices(0)
 	if err != nil {
 		klog.Fatalf("Error getAllocatableDevices: %v", err)
 	}
@@ -42,9 +42,9 @@ func main() {
 }
 
 // printCurrentResourceModel prints the current structured resource model as yaml.
-func printCurrentResourceModel(allocatable nvdevicelib.AllocatableDevices) error {
+func printCurrentResourceModel(allocatable nvdevicelib.PerGpuAllocatableDevices) error {
 	// Build a structured resource model from the list of allocatable devices.
-	instances := currentresourceapi.AllocatableDevices(allocatable).ToNamedResourceInstances()
+	instances := currentresourceapi.PerGpuAllocatableDevices(allocatable).ToNamedResourceInstances()
 	model := currentresourceapi.ResourceModel{
 		NamedResources: &currentresourceapi.NamedResourcesResources{Instances: instances},
 	}
@@ -60,10 +60,10 @@ func printCurrentResourceModel(allocatable nvdevicelib.AllocatableDevices) error
 }
 
 // printCurrentResourceModel prints the new structured resource model as yaml.
-func printNewResourceModel(allocatable nvdevicelib.AllocatableDevices) error {
+func printNewResourceModel(allocatable nvdevicelib.PerGpuAllocatableDevices) error {
 	// Build a structured resource model from the list of allocatable devices.
-	instances := newresourceapi.AllocatableDevices(allocatable).ToNamedResourceInstances()
-	sharedLimits := newresourceapi.AllocatableDevices(allocatable).ToSharedLimits()
+	instances := newresourceapi.PerGpuAllocatableDevices(allocatable).ToNamedResourceInstances()
+	sharedLimits := newresourceapi.PerGpuAllocatableDevices(allocatable).ToSharedLimits()
 	model := newresourceapi.ResourceModel{
 		NamedResources: &newresourceapi.NamedResourcesResources{
 			Instances:    instances,

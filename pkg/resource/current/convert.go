@@ -10,6 +10,9 @@ import (
 	nvdevicelib "github.com/klueska/nvk8s-resourcemodel/pkg/nvdevice"
 )
 
+// PerGpuAllocatableDevices is an alias of nvdevicelib.PerGpuAllocatableDevices
+type PerGpuAllocatableDevices nvdevicelib.PerGpuAllocatableDevices
+
 // AllocatableDevices is an alias of nvdevicelib.AllocatableDevices
 type AllocatableDevices nvdevicelib.AllocatableDevices
 
@@ -18,6 +21,15 @@ type GpuInfo nvdevicelib.GpuInfo
 
 // MigInfo is an alias of nvdevicelib.MigInfo
 type MigInfo nvdevicelib.MigInfo
+
+// ToNamedResourceInstances converts a list of PerGpuAllocatableDevices to a list of NamedResourcesInstances.
+func (devices PerGpuAllocatableDevices) ToNamedResourceInstances() []NamedResourcesInstance {
+	var instances []NamedResourcesInstance
+	for _, perGpuDevices := range devices {
+		instances = append(instances, AllocatableDevices(perGpuDevices).ToNamedResourceInstances()...)
+	}
+	return instances
+}
 
 // ToNamedResourceInstances converts a list of AllocatableDevices to a list of NamedResourcesInstances.
 func (devices AllocatableDevices) ToNamedResourceInstances() []NamedResourcesInstance {

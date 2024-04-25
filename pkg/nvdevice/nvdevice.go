@@ -10,6 +10,9 @@ import (
 	"github.com/NVIDIA/go-nvml/pkg/nvml"
 )
 
+// PerGpuAllocatableDevices holds the list of allocatable devices per GPU.
+type PerGpuAllocatableDevices map[int]AllocatableDevices
+
 // AllocatableDevices holds the list of allocatable devices.
 type AllocatableDevices []AllocatableDevice
 
@@ -87,18 +90,18 @@ func (l NVDeviceLib) AlwaysShutdown() {
 	}
 }
 
-// GetAllocatableDevices gets the set of allocatable devices using NVDeviceLib.
-// A list of GPU indices can be optionally provided to limit the set of
-// allocatable devices to just those GPUs. If no indices are provided, the full
-// set of allocatable devices across all GPUs are returned.
+// GetPerGpuAllocatableDevices gets the set of allocatable devices using
+// NVDeviceLib.  A list of GPU indices can be optionally provided to limit the
+// set of allocatable devices to just those GPUs. If no indices are provided,
+// the full set of allocatable devices across all GPUs are returned.
 // NOTE: Both full GPUs and MIG devices are returned as part of this call.
-func (l NVDeviceLib) GetAllocatableDevices(indices ...int) (AllocatableDevices, error) {
+func (l NVDeviceLib) GetPerGpuAllocatableDevices(indices ...int) (PerGpuAllocatableDevices, error) {
 	if err := l.Init(); err != nil {
 		return nil, err
 	}
 	defer l.AlwaysShutdown()
 
-	var allocatable AllocatableDevices
+	allocatable := make(PerGpuAllocatableDevices)
 	err := l.nvdev.VisitDevices(func(i int, d nvdev.Device) error {
 		if indices != nil && !slices.Contains(indices, i) {
 			return nil
@@ -115,20 +118,17 @@ func (l NVDeviceLib) GetAllocatableDevices(indices ...int) (AllocatableDevices, 
 		}
 
 		l.setDeviceAttributes(gpuInfo, migInfos)
-
-		allocatable = append(allocatable,
-			AllocatableDevice{
+		allocatable[gpuInfo.Index] = []AllocatableDevice{
+			{
 				Gpu: gpuInfo,
 			},
-		)
-
+		}
 		for _, migInfo := range migInfos {
 			migInfo.Parent = gpuInfo
-			allocatable = append(allocatable,
-				AllocatableDevice{
-					Mig: migInfo,
-				},
-			)
+			migDevice := AllocatableDevice{
+				Mig: migInfo,
+			}
+			allocatable[gpuInfo.Index] = append(allocatable[gpuInfo.Index], migDevice)
 		}
 
 		return nil

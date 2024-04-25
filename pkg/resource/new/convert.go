@@ -13,6 +13,9 @@ import (
 	currentresourceapi "github.com/klueska/nvk8s-resourcemodel/pkg/resource/current"
 )
 
+// PerGpuAllocatableDevices is an alias of nvdevicelib.PerGpuAllocatableDevices
+type PerGpuAllocatableDevices nvdevicelib.PerGpuAllocatableDevices
+
 // AllocatableDevices is an alias of nvdevicelib.AllocatableDevices
 type AllocatableDevices nvdevicelib.AllocatableDevices
 
@@ -33,6 +36,15 @@ type consumableQuantities struct {
 	MemoryBytes         int64
 }
 
+// ToNamedResourceInstances converts a list of PerGpuAllocatableDevices to a list of NamedResourcesInstances.
+func (devices PerGpuAllocatableDevices) ToNamedResourceInstances() []NamedResourcesInstance {
+	var instances []NamedResourcesInstance
+	for _, perGpuDevices := range devices {
+		instances = slices.Concat(instances, AllocatableDevices(perGpuDevices).ToNamedResourceInstances())
+	}
+	return instances
+}
+
 // ToNamedResourceInstances converts a list of AllocatableDevices to a list of NamedResourcesInstances.
 func (devices AllocatableDevices) ToNamedResourceInstances() []NamedResourcesInstance {
 	var instances []NamedResourcesInstance
@@ -49,6 +61,15 @@ func (devices AllocatableDevices) ToNamedResourceInstances() []NamedResourcesIns
 		}
 	}
 	return instances
+}
+
+// ToSharedLimits converts a list of PerGpuAllocatableDevices to a list of NamedResourcesGroups shared resource limits.
+func (devices PerGpuAllocatableDevices) ToSharedLimits() []NamedResourcesGroup {
+	var limits []NamedResourcesGroup
+	for _, perGpuDevices := range devices {
+		limits = slices.Concat(limits, AllocatableDevices(perGpuDevices).ToSharedLimits())
+	}
+	return limits
 }
 
 // ToSharedLimits converts a list of AllocatableDevices to a list of NamedResourcesGroups shared resource limits.
