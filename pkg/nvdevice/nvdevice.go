@@ -20,6 +20,12 @@ type AllocatableDevice struct {
 	Mig *MigInfo
 }
 
+// DeviceAttributes extend nvml.DeviceAttributes with extra fields.
+type DeviceAttributes struct {
+	nvml.DeviceAttributes
+	MemorySlices nvml.GpuInstancePlacement
+}
+
 // GpuInfo holds all of the relevant information about a GPU.
 type GpuInfo struct {
 	Minor                 int
@@ -34,7 +40,7 @@ type GpuInfo struct {
 	CudaDriverVersion     string
 	MigCapable            bool
 	MigEnabled            bool
-	Attributes            nvml.DeviceAttributes
+	Attributes            DeviceAttributes
 }
 
 // MigInfo holds all of the relevant information about a MIG device.
@@ -42,7 +48,7 @@ type MigInfo struct {
 	Parent        *GpuInfo
 	Profile       nvdev.MigProfile
 	GIProfileInfo nvml.GpuInstanceProfileInfo
-	GIPlacements  []nvml.GpuInstancePlacement
+	MemorySlices  nvml.GpuInstancePlacement
 }
 
 // NVDeviceLib encapsulates the set of libraries and methods required to query
@@ -194,7 +200,7 @@ func (l NVDeviceLib) getGpuInfo(index int, device nvdev.Device) (*GpuInfo, error
 		CudaDriverVersion:     fmt.Sprintf("%v.%v", cudaDriverVersion/1000, (cudaDriverVersion%1000)/10),
 		MigCapable:            migCapable,
 		MigEnabled:            migEnabled,
-		Attributes:            nvml.DeviceAttributes{},
+		Attributes:            DeviceAttributes{},
 	}
 
 	return gpuInfo, nil
@@ -211,6 +217,9 @@ func (l NVDeviceLib) setDeviceAttributes(gpuInfo *GpuInfo, migInfos []*MigInfo) 
 		setIfGreater(&gpuInfo.Attributes.SharedOfaCount, &migInfo.GIProfileInfo.OfaCount)
 		setIfGreater(&gpuInfo.Attributes.GpuInstanceSliceCount, &migInfo.GIProfileInfo.SliceCount)
 		setIfGreater(&gpuInfo.Attributes.MemorySizeMB, &migInfo.GIProfileInfo.MemorySizeMB)
+		if gpuInfo.Attributes.MemorySlices.Size < migInfo.MemorySlices.Size {
+			gpuInfo.Attributes.MemorySlices = migInfo.MemorySlices
+		}
 	}
 }
 func setIfGreater[T uint32 | uint64](first *T, second *T) {
@@ -231,12 +240,37 @@ func (l NVDeviceLib) getMigInfos(device nvdev.Device) ([]*MigInfo, error) {
 			return nil
 		}
 
-		migInfo, err := l.getMigInfo(device, migProfile)
-		if err != nil {
-			return fmt.Errorf("error getting MIG info for MIG profile %v: %w", migProfile, err)
+		giProfileInfo, ret := device.GetGpuInstanceProfileInfo(migProfile.GetInfo().GIProfileID)
+		if ret == nvml.ERROR_NOT_SUPPORTED {
+			return nil
+		}
+		if ret == nvml.ERROR_INVALID_ARGUMENT {
+			return nil
+		}
+		if ret != nvml.SUCCESS {
+			return fmt.Errorf("error getting GI Profile info for MIG profile %v: %w", migProfile, ret)
 		}
 
-		migInfos = append(migInfos, migInfo)
+		giPlacements, ret := device.GetGpuInstancePossiblePlacements(&giProfileInfo)
+		if ret == nvml.ERROR_NOT_SUPPORTED {
+			return nil
+		}
+		if ret == nvml.ERROR_INVALID_ARGUMENT {
+			return nil
+		}
+		if ret != nvml.SUCCESS {
+			return fmt.Errorf("error getting GI possible placements for MIG profile %v: %w", migProfile, ret)
+		}
+
+		for _, giPlacement := range giPlacements {
+			migInfo := &MigInfo{
+				Parent:        nil,
+				Profile:       migProfile,
+				GIProfileInfo: giProfileInfo,
+				MemorySlices:  giPlacement,
+			}
+			migInfos = append(migInfos, migInfo)
+		}
 
 		return nil
 	})
@@ -245,38 +279,4 @@ func (l NVDeviceLib) getMigInfos(device nvdev.Device) ([]*MigInfo, error) {
 	}
 
 	return migInfos, nil
-}
-
-// getMigInfo returns info about a MIG device with the provided profile on the GPU represented by the provided device.
-func (l NVDeviceLib) getMigInfo(device nvdev.Device, migProfile nvdev.MigProfile) (*MigInfo, error) {
-	giProfileInfo, ret := device.GetGpuInstanceProfileInfo(migProfile.GetInfo().GIProfileID)
-	if ret == nvml.ERROR_NOT_SUPPORTED {
-		return nil, nil
-	}
-	if ret == nvml.ERROR_INVALID_ARGUMENT {
-		return nil, nil
-	}
-	if ret != nvml.SUCCESS {
-		return nil, fmt.Errorf("error getting GI profile info: %w", ret)
-	}
-
-	giPlacements, ret := device.GetGpuInstancePossiblePlacements(&giProfileInfo)
-	if ret == nvml.ERROR_NOT_SUPPORTED {
-		return nil, nil
-	}
-	if ret == nvml.ERROR_INVALID_ARGUMENT {
-		return nil, nil
-	}
-	if ret != nvml.SUCCESS {
-		return nil, fmt.Errorf("error getting GI possible placements: %w", ret)
-	}
-
-	migInfo := &MigInfo{
-		Parent:        nil,
-		Profile:       migProfile,
-		GIProfileInfo: giProfileInfo,
-		GIPlacements:  giPlacements,
-	}
-
-	return migInfo, nil
 }
