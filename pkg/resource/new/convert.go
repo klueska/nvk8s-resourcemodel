@@ -111,34 +111,6 @@ func (devices AllocatableDevices) ToSharedLimits() NamedResourcesGroup {
 	return limits
 }
 
-// addOrReplaceQuantityIfLarger is an internal function to conditionally update Quantities in a NamedResourcesGroup.
-func (g *NamedResourcesGroup) addOrReplaceQuantityIfLarger(q *NamedResourcesQuantity) {
-	for i := range g.Quantities {
-		if q.Name == g.Quantities[i].Name {
-			if q.Value.Cmp(*g.Quantities[i].Value) > 0 {
-				*g.Quantities[i].Value = *q.Value
-			}
-			return
-		}
-	}
-	g.Quantities = append(g.Quantities, *q)
-}
-
-// addOrReplaceIntSetIfLarger is an internal function to conditionally update IntSets in a NamedResourcesGroup.
-func (g *NamedResourcesGroup) addOrReplaceIntSetIfLarger(s *NamedResourcesSet[int]) {
-	for i := range g.IntSets {
-		if s.Name == g.IntSets[i].Name {
-			for _, item := range s.Items {
-				if !slices.Contains(g.IntSets[i].Items, item) {
-					g.IntSets[i].Items = append(g.IntSets[i].Items, item)
-				}
-			}
-			return
-		}
-	}
-	g.IntSets = append(g.IntSets, *s)
-}
-
 // ToNamedResourcesInstance converts a GpuInfo object to a NamedResourcesInstance.
 func (gpu *GpuInfo) ToNamedResourcesInstance() *NamedResourcesInstance {
 	currentInstance := (*currentresourceapi.GpuInfo)(gpu).ToNamedResourcesInstance()
