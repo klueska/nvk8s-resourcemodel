@@ -11,12 +11,21 @@ type namedType interface {
 }
 
 // toMap takes any slice of objects implementing the namedType interface and turns it into a map with its name as the key.
-func ToMap[S ~[]E, E namedType](s S) map[string]*E {
+func toMap[S ~[]E, E namedType](s S) map[string]*E {
 	m := make(map[string]*E)
 	for i := range s {
 		m[s[i].GetName()] = &s[i]
 	}
 	return m
+}
+
+// toList takes any map of pointers to objects with strings as keys and turns it into a slice or objects.
+func toList[M map[string]*E, E any](m M) []E {
+	s := make([]E, 0, len(m))
+	for _, v := range m {
+		s = append(s, *v)
+	}
+	return s
 }
 
 // GetName returns the name of a NamedResourcesQuantity to implement the namedType interface.
@@ -50,36 +59,33 @@ func (g *NamedResourcesGroup) Add(other *NamedResourcesGroup) (bool, error) {
 		return false, fmt.Errorf("different group names")
 	}
 
-	quantitiesMap := ToMap(g.Quantities)
-	intSetsMap := ToMap(g.IntSets)
-
-	var newQuantities []NamedResourcesQuantity
+	newQuantitiesMap := toMap(g.Quantities)
 	for _, q := range other.Quantities {
-		if _, exists := quantitiesMap[q.Name]; !exists {
+		if _, exists := newQuantitiesMap[q.Name]; !exists {
 			return false, fmt.Errorf("missing %v", q.Name)
 		}
-		newQuantity := quantitiesMap[q.Name].DeepCopy()
+		newQuantity := newQuantitiesMap[q.Name].DeepCopy()
 		newQuantity.Value.Add(*q.Value)
-		newQuantities = append(newQuantities, *newQuantity)
+		newQuantitiesMap[q.Name] = newQuantity
 	}
 
-	var newIntSets []NamedResourcesIntSet
+	newIntSetsMap := toMap(g.IntSets)
 	for _, s := range other.IntSets {
-		if _, exists := intSetsMap[s.Name]; !exists {
+		if _, exists := newIntSetsMap[s.Name]; !exists {
 			return false, fmt.Errorf("missing %v", s.Name)
 		}
-		newIntSet := intSetsMap[s.Name].DeepCopy()
+		newIntSet := newIntSetsMap[s.Name].DeepCopy()
 		for _, item := range s.Items {
 			if slices.Contains(newIntSet.Items, item) {
 				return false, fmt.Errorf("item already in %v: %v", s.Name, item)
 			}
 			newIntSet.Items = append(newIntSet.Items, item)
 		}
-		newIntSets = append(newIntSets, *newIntSet)
+		newIntSetsMap[s.Name] = newIntSet
 	}
 
-	g.Quantities = newQuantities
-	g.IntSets = newIntSets
+	g.Quantities = toList(newQuantitiesMap)
+	g.IntSets = toList(newIntSetsMap)
 
 	return true, nil
 }
@@ -90,46 +96,43 @@ func (g *NamedResourcesGroup) Sub(other *NamedResourcesGroup) (bool, error) {
 		return false, fmt.Errorf("different group names")
 	}
 
-	quantitiesMap := ToMap(g.Quantities)
-	intSetsMap := ToMap(g.IntSets)
-
-	var newQuantities []NamedResourcesQuantity
+	newQuantitiesMap := toMap(g.Quantities)
 	for _, q := range other.Quantities {
-		if _, exists := quantitiesMap[q.Name]; !exists {
+		if _, exists := newQuantitiesMap[q.Name]; !exists {
 			return false, fmt.Errorf("missing %v", q.Name)
 		}
-		if quantitiesMap[q.Name].Value.Cmp(*q.Value) < 0 {
+		if newQuantitiesMap[q.Name].Value.Cmp(*q.Value) < 0 {
 			return false, nil
 		}
-		newQuantity := quantitiesMap[q.Name].DeepCopy()
+		newQuantity := newQuantitiesMap[q.Name].DeepCopy()
 		newQuantity.Value.Sub(*q.Value)
-		newQuantities = append(newQuantities, *newQuantity)
+		newQuantitiesMap[q.Name] = newQuantity
 	}
 
-	var newIntSets []NamedResourcesIntSet
+	newIntSetsMap := toMap(g.IntSets)
 	for _, s := range other.IntSets {
-		if _, exists := intSetsMap[s.Name]; !exists {
+		if _, exists := newIntSetsMap[s.Name]; !exists {
 			return false, fmt.Errorf("missing %v", s.Name)
 		}
 		for _, item := range s.Items {
-			if !slices.Contains(intSetsMap[s.Name].Items, item) {
+			if !slices.Contains(newIntSetsMap[s.Name].Items, item) {
 				return false, nil
 			}
 		}
 		var newInts []int
-		for _, item := range intSetsMap[s.Name].Items {
+		for _, item := range newIntSetsMap[s.Name].Items {
 			if slices.Contains(s.Items, item) {
 				continue
 			}
 			newInts = append(newInts, item)
 		}
-		newIntSet := intSetsMap[s.Name].DeepCopy()
+		newIntSet := newIntSetsMap[s.Name].DeepCopy()
 		newIntSet.Items = newInts
-		newIntSets = append(newIntSets, *newIntSet)
+		newIntSetsMap[s.Name] = newIntSet
 	}
 
-	g.Quantities = newQuantities
-	g.IntSets = newIntSets
+	g.Quantities = toList(newQuantitiesMap)
+	g.IntSets = toList(newIntSetsMap)
 
 	return true, nil
 }
