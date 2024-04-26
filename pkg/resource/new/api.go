@@ -12,6 +12,7 @@ type NamedResourcesAttribute = resourceapi.NamedResourcesAttribute
 type NamedResourcesAttributeValue = resourceapi.NamedResourcesAttributeValue
 
 // NamedResourcesQuantity represents a named quantity of resources.
+// +k8s:deepcopy-gen=true
 type NamedResourcesQuantity struct {
 	// Name is the name of the resource represented by this quantity.
 	// It must be a DNS subdomain.
@@ -22,6 +23,7 @@ type NamedResourcesQuantity struct {
 }
 
 // NamedResourcesIntSet represents a named list of discrete integers.
+// +k8s:deepcopy-gen=true
 type NamedResourcesIntSet struct {
 	// Name is the name of the resource represented by this quantity.
 	// It must be a DNS subdomain.
@@ -34,6 +36,7 @@ type NamedResourcesIntSet struct {
 }
 
 // NamedResourcesStringSet represents a named list of discrete strings.
+// +k8s:deepcopy-gen=true
 type NamedResourcesStringSet struct {
 	// Name is the name of the resource represented by this quantity.
 	// It must be a DNS subdomain.
@@ -46,6 +49,7 @@ type NamedResourcesStringSet struct {
 }
 
 // NamedResourcesNamedResourceGroup represents a named group of resources (quantites and sets).
+// +k8s:deepcopy-gen=true
 type NamedResourcesGroup struct {
 	// Name is unique identifier among all resource groups managed by
 	// the driver on the node. It must be a DNS subdomain.
@@ -74,6 +78,7 @@ type NamedResourcesGroup struct {
 }
 
 // ResourceModel must have one and only one field set.
+// +k8s:deepcopy-gen=true
 type ResourceModel struct {
 	// NamedResources describes available resources using the named resources model.
 	//
@@ -82,6 +87,7 @@ type ResourceModel struct {
 }
 
 // NamedResourcesResources is used in ResourceModel.
+// +k8s:deepcopy-gen=true
 type NamedResourcesResources struct {
 	// The list of all individual resources instances currently available.
 	//
@@ -98,6 +104,7 @@ type NamedResourcesResources struct {
 
 // NamedResourcesInstance represents one individual hardware instance that can be selected based
 // on its attributes.
+// +k8s:deepcopy-gen=true
 type NamedResourcesInstance struct {
 	// Name is unique identifier among all resource instances managed by
 	// the driver on the node. It must be a DNS subdomain.

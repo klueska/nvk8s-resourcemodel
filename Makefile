@@ -14,6 +14,10 @@
 
 .DEFAULT_GOAL := all
 
+DEEPCOPY_SOURCES  = pkg/nvdevice
+DEEPCOPY_SOURCES += pkg/resource/current
+DEEPCOPY_SOURCES += pkg/resource/new
+
 .PHONY: all
 all: fmt test build
 
@@ -32,3 +36,16 @@ build:
 .PHONY: run
 run: 
 	go run ./cmd/print-model/...
+
+.PHONY: generate-deepcopy
+generate-deepcopy:
+	for dir in $(DEEPCOPY_SOURCES); do \
+	    controller-gen \
+	        object:headerFile=$(CURDIR)/hack/boilerplate.go.txt,year=$(shell date +"%Y") \
+	        paths=$(CURDIR)/$${dir}/ \
+	        output:object:dir=$(CURDIR)/$${dir}; \
+	done
+
+.PHONY: clean
+clean:
+	find . -name "zz_generated.*" | xargs rm -f
