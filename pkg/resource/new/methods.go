@@ -28,23 +28,13 @@ func toList[M map[string]*E, E any](m M) []E {
 	return s
 }
 
-// GetName returns the name of a NamedResourcesQuantity to implement the namedType interface.
-func (q NamedResourcesQuantity) GetName() string {
+// GetName returns the name of a NamedResourcesSharedResource to implement the namedType interface.
+func (q NamedResourcesSharedResource) GetName() string {
 	return q.Name
 }
 
-// GetName returns the name of a NamedResourcesIntSet to implement the namedType interface.
-func (s NamedResourcesIntSet) GetName() string {
-	return s.Name
-}
-
-// GetName returns the name of a NamedResourcesStringSet to implement the namedType interface.
-func (s NamedResourcesStringSet) GetName() string {
-	return s.Name
-}
-
-// GetName returns the name of a NamedResourcesGroup to implement the namedType interface.
-func (g NamedResourcesGroup) GetName() string {
+// GetName returns the name of a NamedResourcesSharedResourceGroup to implement the namedType interface.
+func (g NamedResourcesSharedResourceGroup) GetName() string {
 	return g.Name
 }
 
@@ -53,129 +43,121 @@ func (i NamedResourcesInstance) GetName() string {
 	return i.Name
 }
 
-// Add adds the resources of one NamedResourcesGroup to another.
-func (g *NamedResourcesGroup) Add(other *NamedResourcesGroup) (bool, error) {
+// Add adds the resources of one NamedResourcesSharedResourceGroup to another.
+func (g *NamedResourcesSharedResourceGroup) Add(other *NamedResourcesSharedResourceGroup) (bool, error) {
 	if g.Name != other.Name {
 		return false, fmt.Errorf("different group names")
 	}
 
-	newQuantitiesMap := toMap(g.Quantities)
-	for _, q := range other.Quantities {
-		if _, exists := newQuantitiesMap[q.Name]; !exists {
-			return false, fmt.Errorf("missing %v", q.Name)
+	newItems := toMap(g.DeepCopy().Items)
+	for _, item := range other.Items {
+		name := item.Name
+		if _, exists := newItems[name]; !exists {
+			return false, fmt.Errorf("missing %v", name)
 		}
-		newQuantity := newQuantitiesMap[q.Name].DeepCopy()
-		newQuantity.Value.Add(*q.Value)
-		newQuantitiesMap[q.Name] = newQuantity
-	}
-
-	newIntSetsMap := toMap(g.IntSets)
-	for _, s := range other.IntSets {
-		if _, exists := newIntSetsMap[s.Name]; !exists {
-			return false, fmt.Errorf("missing %v", s.Name)
-		}
-		newIntSet := newIntSetsMap[s.Name].DeepCopy()
-		for _, item := range s.Items {
-			if slices.Contains(newIntSet.Items, item) {
-				return false, fmt.Errorf("item already in %v: %v", s.Name, item)
+		if item.QuantityValue != nil {
+			if newItems[name].QuantityValue == nil {
+				return false, fmt.Errorf("mismatched types for %v", name)
 			}
-			newIntSet.Items = append(newIntSet.Items, item)
+			newItems[name].QuantityValue.Add(*item.QuantityValue)
 		}
-		newIntSetsMap[s.Name] = newIntSet
+		if item.IntSliceValue != nil {
+			if newItems[name].IntSliceValue == nil {
+				return false, fmt.Errorf("mismatched types for %v", name)
+			}
+			for _, i := range item.IntSliceValue.Ints {
+				if slices.Contains(newItems[name].IntSliceValue.Ints, i) {
+					return false, fmt.Errorf("item already in %v: %v", name, i)
+				}
+				newItems[name].IntSliceValue.Ints = append(newItems[name].IntSliceValue.Ints, i)
+			}
+		}
 	}
-
-	g.Quantities = toList(newQuantitiesMap)
-	g.IntSets = toList(newIntSetsMap)
+	g.Items = toList(newItems)
 
 	return true, nil
 }
 
-// Sub subtracts the resources of one NamedResourcesGroup from another.
-func (g *NamedResourcesGroup) Sub(other *NamedResourcesGroup) (bool, error) {
+// Sub subtracts the resources of one NamedResourcesSharedResourceGroup from another.
+func (g *NamedResourcesSharedResourceGroup) Sub(other *NamedResourcesSharedResourceGroup) (bool, error) {
 	if g.Name != other.Name {
 		return false, fmt.Errorf("different group names")
 	}
 
-	newQuantitiesMap := toMap(g.Quantities)
-	for _, q := range other.Quantities {
-		if _, exists := newQuantitiesMap[q.Name]; !exists {
-			return false, fmt.Errorf("missing %v", q.Name)
+	newItems := toMap(g.DeepCopy().Items)
+	for _, item := range other.Items {
+		name := item.Name
+		if _, exists := newItems[name]; !exists {
+			return false, fmt.Errorf("missing %v", name)
 		}
-		if newQuantitiesMap[q.Name].Value.Cmp(*q.Value) < 0 {
-			return false, nil
-		}
-		newQuantity := newQuantitiesMap[q.Name].DeepCopy()
-		newQuantity.Value.Sub(*q.Value)
-		newQuantitiesMap[q.Name] = newQuantity
-	}
-
-	newIntSetsMap := toMap(g.IntSets)
-	for _, s := range other.IntSets {
-		if _, exists := newIntSetsMap[s.Name]; !exists {
-			return false, fmt.Errorf("missing %v", s.Name)
-		}
-		for _, item := range s.Items {
-			if !slices.Contains(newIntSetsMap[s.Name].Items, item) {
+		if item.QuantityValue != nil {
+			if newItems[name].QuantityValue == nil {
+				return false, fmt.Errorf("mismatched types for %v", name)
+			}
+			if newItems[name].QuantityValue.Cmp(*item.QuantityValue) < 0 {
 				return false, nil
 			}
+			newItems[name].QuantityValue.Sub(*item.QuantityValue)
 		}
-		var newInts []int
-		for _, item := range newIntSetsMap[s.Name].Items {
-			if slices.Contains(s.Items, item) {
-				continue
+		if item.IntSliceValue != nil {
+			if newItems[name].IntSliceValue == nil {
+				return false, fmt.Errorf("mismatched types for %v", name)
 			}
-			newInts = append(newInts, item)
+			for _, i := range item.IntSliceValue.Ints {
+				if !slices.Contains(newItems[name].IntSliceValue.Ints, i) {
+					return false, nil
+				}
+			}
+			var newInts []int64
+			for _, i := range newItems[name].IntSliceValue.Ints {
+				if slices.Contains(item.IntSliceValue.Ints, i) {
+					continue
+				}
+				newInts = append(newInts, i)
+			}
+			newItems[name].IntSliceValue.Ints = newInts
 		}
-		newIntSet := newIntSetsMap[s.Name].DeepCopy()
-		newIntSet.Items = newInts
-		newIntSetsMap[s.Name] = newIntSet
 	}
-
-	g.Quantities = toList(newQuantitiesMap)
-	g.IntSets = toList(newIntSetsMap)
+	g.Items = toList(newItems)
 
 	return true, nil
 }
 
-// addOrReplaceQuantityIfLarger is an internal function to conditionally update Quantities in a NamedResourcesGroup.
-func (g *NamedResourcesGroup) addOrReplaceQuantityIfLarger(q *NamedResourcesQuantity) {
-	for i := range g.Quantities {
-		if q.Name == g.Quantities[i].Name {
-			if q.Value.Cmp(*g.Quantities[i].Value) > 0 {
-				*g.Quantities[i].Value = *q.Value
+// addOrReplaceQuantityIfLarger is an internal function to conditionally update Quantities in a NamedResourcesSharedResourceGroup.
+func (g *NamedResourcesSharedResourceGroup) addOrReplaceQuantityIfLarger(r *NamedResourcesSharedResource) {
+	for i := range g.Items {
+		if r.Name == g.Items[i].Name {
+			if r.QuantityValue.Cmp(*g.Items[i].QuantityValue) > 0 {
+				*g.Items[i].QuantityValue = *r.QuantityValue
 			}
 			return
 		}
 	}
-	g.Quantities = append(g.Quantities, *q)
+	g.Items = append(g.Items, *r)
 }
 
-// addOrReplaceIntSetIfLarger is an internal function to conditionally update IntSets in a NamedResourcesGroup.
-func (g *NamedResourcesGroup) addOrReplaceIntSetIfLarger(s *NamedResourcesIntSet) {
-	for i := range g.IntSets {
-		if s.Name == g.IntSets[i].Name {
-			for _, item := range s.Items {
-				if !slices.Contains(g.IntSets[i].Items, item) {
-					g.IntSets[i].Items = append(g.IntSets[i].Items, item)
-				}
-			}
+// addOrReplaceIntSliceIfLarger is an internal function to conditionally update IntSlices in a NamedResourcesSharedResourceGroup.
+func (g *NamedResourcesSharedResourceGroup) addOrReplaceIntSliceIfLarger(r *NamedResourcesSharedResource) {
+	for i := range g.Items {
+		if r.Name == g.Items[i].Name {
+			newInts := slices.Concat(g.Items[i].IntSliceValue.Ints, r.IntSliceValue.Ints)
+			slices.Sort(newInts)
+			g.Items[i].IntSliceValue.Ints = slices.Compact(newInts)
 			return
 		}
 	}
-	g.IntSets = append(g.IntSets, *s)
+	g.Items = append(g.Items, *r)
 }
 
-// addOrReplaceStringSetIfLarger is an internal function to conditionally update StringSets in a NamedResourcesGroup.
-func (g *NamedResourcesGroup) addOrReplaceStringSetIfLarger(s *NamedResourcesStringSet) {
-	for i := range g.StringSets {
-		if s.Name == g.StringSets[i].Name {
-			for _, item := range s.Items {
-				if !slices.Contains(g.StringSets[i].Items, item) {
-					g.StringSets[i].Items = append(g.StringSets[i].Items, item)
-				}
-			}
+// addOrReplaceStringSliceIfLarger is an internal function to conditionally update StringSlices in a NamedResourcesSharedResourceGroup.
+func (g *NamedResourcesSharedResourceGroup) addOrReplaceStringSliceIfLarger(r *NamedResourcesSharedResource) {
+	for i := range g.Items {
+		if r.Name == g.Items[i].Name {
+			newStrings := slices.Concat(g.Items[i].StringSliceValue.Strings, r.StringSliceValue.Strings)
+			slices.Sort(newStrings)
+			g.Items[i].StringSliceValue.Strings = slices.Compact(newStrings)
 			return
 		}
 	}
-	g.StringSets = append(g.StringSets, *s)
+	g.Items = append(g.Items, *r)
 }

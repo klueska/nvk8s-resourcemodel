@@ -45,7 +45,7 @@ func (devices AllocatableDevices) ToNamedResourcesResourceModel() ResourceModel 
 	model := ResourceModel{
 		NamedResources: &NamedResourcesResources{
 			Instances:    instances,
-			SharedLimits: []NamedResourcesGroup{sharedLimits},
+			SharedLimits: []NamedResourcesSharedResourceGroup{sharedLimits},
 		},
 	}
 	return model
@@ -78,20 +78,20 @@ func (devices AllocatableDevices) ToNamedResourceInstances() []NamedResourcesIns
 	return instances
 }
 
-// ToSharedLimits converts a list of PerGpuAllocatableDevices to a list of NamedResourcesGroups shared resource limits.
-func (devices PerGpuAllocatableDevices) ToSharedLimits() []NamedResourcesGroup {
-	var limits []NamedResourcesGroup
+// ToSharedLimits converts a list of PerGpuAllocatableDevices to a list of NamedResourcesSharedResourceGroups shared resource limits.
+func (devices PerGpuAllocatableDevices) ToSharedLimits() []NamedResourcesSharedResourceGroup {
+	var limits []NamedResourcesSharedResourceGroup
 	for _, perGpuDevices := range devices {
 		limits = append(limits, AllocatableDevices(perGpuDevices).ToSharedLimits())
 	}
 	return limits
 }
 
-// ToSharedLimits converts a list of AllocatableDevices to a NamedResourcesGroup of shared resource limits.
-func (devices AllocatableDevices) ToSharedLimits() NamedResourcesGroup {
-	var limits NamedResourcesGroup
+// ToSharedLimits converts a list of AllocatableDevices to a NamedResourcesSharedResourceGroup of shared resource limits.
+func (devices AllocatableDevices) ToSharedLimits() NamedResourcesSharedResourceGroup {
+	var limits NamedResourcesSharedResourceGroup
 	for _, device := range devices {
-		var resources NamedResourcesGroup
+		var resources NamedResourcesSharedResourceGroup
 		if device.Gpu != nil {
 			resources = (*GpuInfo)(device.Gpu).getResources()
 		}
@@ -101,11 +101,13 @@ func (devices AllocatableDevices) ToSharedLimits() NamedResourcesGroup {
 		if len(limits.Name) == 0 {
 			limits.Name = resources.Name
 		}
-		for _, q := range resources.Quantities {
-			limits.addOrReplaceQuantityIfLarger(&q)
-		}
-		for _, s := range resources.IntSets {
-			limits.addOrReplaceIntSetIfLarger(&s)
+		for _, item := range resources.Items {
+			if item.QuantityValue != nil {
+				limits.addOrReplaceQuantityIfLarger(&item)
+			}
+			if item.IntSliceValue != nil {
+				limits.addOrReplaceIntSliceIfLarger(&item)
+			}
 		}
 	}
 	return limits
@@ -125,7 +127,7 @@ func (gpu *GpuInfo) ToNamedResourcesInstance() *NamedResourcesInstance {
 		}
 	}
 
-	resources := []NamedResourcesGroup{
+	resources := []NamedResourcesSharedResourceGroup{
 		(*GpuInfo)(gpu).getResources(),
 	}
 
@@ -157,7 +159,7 @@ func (mig *MigInfo) ToNamedResourcesInstance() *NamedResourcesInstance {
 		}
 	}
 
-	resources := []NamedResourcesGroup{
+	resources := []NamedResourcesSharedResourceGroup{
 		(*MigInfo)(mig).getResources(),
 	}
 
@@ -173,73 +175,90 @@ func (mig *MigInfo) ToNamedResourcesInstance() *NamedResourcesInstance {
 }
 
 // getResources gets the set of shared resources consumed by the GPU.
-func (gpu *GpuInfo) getResources() NamedResourcesGroup {
+func (gpu *GpuInfo) getResources() NamedResourcesSharedResourceGroup {
 	name := fmt.Sprintf("gpu-%v-shared-resources", gpu.Index)
 
-	quantities := []NamedResourcesQuantity{
+	resources := []NamedResourcesSharedResource{
 		{
-			Name:  "memory",
-			Value: resource.NewQuantity(int64(gpu.MemoryBytes), resource.BinarySI),
+			Name: "memory",
+			NamedResourcesSharedResourceValue: NamedResourcesSharedResourceValue{
+				QuantityValue: resource.NewQuantity(int64(gpu.MemoryBytes), resource.BinarySI),
+			},
 		},
 	}
 
-	group := NamedResourcesGroup{
-		Name:       name,
-		Quantities: quantities,
+	group := NamedResourcesSharedResourceGroup{
+		Name:  name,
+		Items: resources,
 	}
 
 	return group
 }
 
 // getResources gets the set of shared resources consumed by the MIG device.
-func (mig *MigInfo) getResources() NamedResourcesGroup {
+func (mig *MigInfo) getResources() NamedResourcesSharedResourceGroup {
 	name := fmt.Sprintf("gpu-%v-shared-resources", mig.Parent.Index)
 
+	var memorySlices []int64
+	for i := uint32(0); i < mig.MemorySlices.Size; i++ {
+		memorySlices = append(memorySlices, int64(mig.MemorySlices.Start+i))
+	}
+
 	info := mig.GIProfileInfo
-	quantities := []NamedResourcesQuantity{
+	resources := []NamedResourcesSharedResource{
 		{
-			Name:  "multiprocessors",
-			Value: resource.NewQuantity(int64(info.MultiprocessorCount), resource.BinarySI),
+			Name: "multiprocessors",
+			NamedResourcesSharedResourceValue: NamedResourcesSharedResourceValue{
+				QuantityValue: resource.NewQuantity(int64(info.MultiprocessorCount), resource.BinarySI),
+			},
 		},
 		{
-			Name:  "copy-engines",
-			Value: resource.NewQuantity(int64(info.CopyEngineCount), resource.BinarySI),
+			Name: "copy-engines",
+			NamedResourcesSharedResourceValue: NamedResourcesSharedResourceValue{
+				QuantityValue: resource.NewQuantity(int64(info.CopyEngineCount), resource.BinarySI),
+			},
 		},
 		{
-			Name:  "decoders",
-			Value: resource.NewQuantity(int64(info.DecoderCount), resource.BinarySI),
+			Name: "decoders",
+			NamedResourcesSharedResourceValue: NamedResourcesSharedResourceValue{
+				QuantityValue: resource.NewQuantity(int64(info.DecoderCount), resource.BinarySI),
+			},
 		},
 		{
-			Name:  "encoders",
-			Value: resource.NewQuantity(int64(info.EncoderCount), resource.BinarySI),
+			Name: "encoders",
+			NamedResourcesSharedResourceValue: NamedResourcesSharedResourceValue{
+				QuantityValue: resource.NewQuantity(int64(info.EncoderCount), resource.BinarySI),
+			},
 		},
 		{
-			Name:  "jpeg-engines",
-			Value: resource.NewQuantity(int64(info.JpegCount), resource.BinarySI),
+			Name: "jpeg-engines",
+			NamedResourcesSharedResourceValue: NamedResourcesSharedResourceValue{
+				QuantityValue: resource.NewQuantity(int64(info.JpegCount), resource.BinarySI),
+			},
 		},
 		{
-			Name:  "ofa-engines",
-			Value: resource.NewQuantity(int64(info.OfaCount), resource.BinarySI),
+			Name: "ofa-engines",
+			NamedResourcesSharedResourceValue: NamedResourcesSharedResourceValue{
+				QuantityValue: resource.NewQuantity(int64(info.OfaCount), resource.BinarySI),
+			},
 		},
 		{
-			Name:  "memory",
-			Value: resource.NewQuantity(int64(info.MemorySizeMB*1024*1024), resource.BinarySI),
+			Name: "memory",
+			NamedResourcesSharedResourceValue: NamedResourcesSharedResourceValue{
+				QuantityValue: resource.NewQuantity(int64(info.MemorySizeMB*1024*1024), resource.BinarySI),
+			},
+		},
+		{
+			Name: "memory-slices",
+			NamedResourcesSharedResourceValue: NamedResourcesSharedResourceValue{
+				IntSliceValue: &NamedResourcesIntSlice{Ints: memorySlices},
+			},
 		},
 	}
 
-	var memorySlices []int
-	for i := 0; i < int(mig.MemorySlices.Size); i++ {
-		memorySlices = append(memorySlices, int(mig.MemorySlices.Start)+i)
-	}
-	memorySlicesSet := NamedResourcesIntSet{
-		Name:  "memory-slices",
-		Items: memorySlices,
-	}
-
-	group := NamedResourcesGroup{
-		Name:       name,
-		Quantities: quantities,
-		IntSets:    []NamedResourcesIntSet{memorySlicesSet},
+	group := NamedResourcesSharedResourceGroup{
+		Name:  name,
+		Items: resources,
 	}
 
 	return group

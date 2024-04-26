@@ -11,70 +11,49 @@ type NamedResourcesAttribute = resourceapi.NamedResourcesAttribute
 // NamedResourcesAttributeValue is an alias of resourceapi.NamedResourcesAttributeValue
 type NamedResourcesAttributeValue = resourceapi.NamedResourcesAttributeValue
 
-// NamedResourcesQuantity represents a named quantity of resources.
+// NamedResourcesIntSlice is an alias of resourceapi.NamedResourcesIntSlice
+type NamedResourcesIntSlice = resourceapi.NamedResourcesIntSlice
+
+// NamedResourcesStringSlice is an alias of resourceapi.NamedResourcesStringSlice
+type NamedResourcesStringSlice = resourceapi.NamedResourcesStringSlice
+
+// NamedResourcesSharedResource represents a shared resource that is consumable by a top-level resource when allocated.
 // +k8s:deepcopy-gen=true
-type NamedResourcesQuantity struct {
-	// Name is the name of the resource represented by this quantity.
+type NamedResourcesSharedResource struct {
+	// Name is the name of the resource represented by this shared resource.
 	// It must be a DNS subdomain.
 	Name string `json:"name" protobuf:"bytes,1,name=name"`
 
-	// Value is the actual quantity of resources.
-	Value *resource.Quantity `json:"value" protobuf:"bytes,2,name=value"`
+	// NamedResourcesAttributeValue is an embedded type representing the actual value of the shared resource.
+	NamedResourcesSharedResourceValue `json:",inline" protobuf:"bytes,2,opt,name=value"`
 }
 
-// NamedResourcesIntSet represents a named list of discrete integers.
+// NamedResourcesSharedResourceValue represents the value of a shared resource.
+// NamedResourcesSharedResourceValue must have one and only one field set.
 // +k8s:deepcopy-gen=true
-type NamedResourcesIntSet struct {
-	// Name is the name of the resource represented by this quantity.
-	// It must be a DNS subdomain.
-	Name string `json:"name" protobuf:"bytes,1,name=name"`
+type NamedResourcesSharedResourceValue struct {
+	// QuantityValue is a quantity.
+	QuantityValue *resource.Quantity `json:"quantity,omitempty" protobuf:"bytes,1,opt,name=quantity"`
 
-	// Items is the actual set of ints.
-	//
-	// +listType=set
-	Items []int `json:"items" protobuf:"bytes,2,name=items"`
+	// IntSliceValue is an array of 64-bit integers.
+	IntSliceValue *NamedResourcesIntSlice `json:"intSlice,omitempty" protobuf:"varint,2,rep,name=intSlice"`
+
+	// StringSliceValue is an array of strings.
+	StringSliceValue *NamedResourcesStringSlice `json:"stringSlice,omitempty" protobuf:"bytes,3,rep,name=stringSlice"`
 }
 
-// NamedResourcesStringSet represents a named list of discrete strings.
+// NamedResourcesSharedResourceGroup represents a named group of shared resources.
 // +k8s:deepcopy-gen=true
-type NamedResourcesStringSet struct {
-	// Name is the name of the resource represented by this quantity.
-	// It must be a DNS subdomain.
-	Name string `json:"name" protobuf:"bytes,1,name=name"`
-
-	// Items is the actual set of strings.
-	//
-	// +listType=set
-	Items []string `json:"items" protobuf:"bytes,2,name=items"`
-}
-
-// NamedResourcesNamedResourceGroup represents a named group of resources (quantites and sets).
-// +k8s:deepcopy-gen=true
-type NamedResourcesGroup struct {
+type NamedResourcesSharedResourceGroup struct {
 	// Name is unique identifier among all resource groups managed by
 	// the driver on the node. It must be a DNS subdomain.
 	Name string `json:"name" protobuf:"bytes,1,name=name"`
 
-	// Quantities represents the list of all named resource quantities in the
-	// resource group.
+	// Items represents the list of all resources in the shared resource group.
 	//
 	// +listType=atomic
 	// +optional
-	Quantities []NamedResourcesQuantity `json:"quantities,omitempty" protobuf:"bytes,2,opt,name=quantities"`
-
-	// StringSets represents the list of all named resource sets that contains
-	// strings in the resource group.
-	//
-	// +listType=atomic
-	// +optional
-	StringSets []NamedResourcesStringSet `json:"stringSets,omitempty" protobuf:"bytes,3,opt,name=stringSets"`
-
-	// IntSets represents the list of all named resource sets that contains
-	// ints in the resource group.
-	//
-	// +listType=atomic
-	// +optional
-	IntSets []NamedResourcesIntSet `json:"intSets,omitempty" protobuf:"bytes,4,opt,name=intSets"`
+	Items []NamedResourcesSharedResource `json:"items,omitempty" protobuf:"bytes,2,opt,name=items"`
 }
 
 // ResourceModel must have one and only one field set.
@@ -99,7 +78,7 @@ type NamedResourcesResources struct {
 	//
 	// +listType=atomic
 	// +optional
-	SharedLimits []NamedResourcesGroup `json:"sharedLimits,omitempty" protobuf:"bytes,2,opt,name=sharedLimits"`
+	SharedLimits []NamedResourcesSharedResourceGroup `json:"sharedLimits,omitempty" protobuf:"bytes,2,opt,name=sharedLimits"`
 }
 
 // NamedResourcesInstance represents one individual hardware instance that can be selected based
@@ -122,5 +101,5 @@ type NamedResourcesInstance struct {
 	//
 	// +listType=atomic
 	// +optional
-	Resources []NamedResourcesGroup `json:"resources,omitempty" protobuf:"bytes,3,opt,name=resources"`
+	Resources []NamedResourcesSharedResourceGroup `json:"resources,omitempty" protobuf:"bytes,3,opt,name=resources"`
 }
