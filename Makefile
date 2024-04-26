@@ -32,10 +32,15 @@ test:
 .PHONY: build
 build:
 	cd cmd/print-model && go build
+	cd cmd/print-possible-allocations && go build
 
-.PHONY: run
-run: 
+.PHONY: print-possible-allocations
+print-model:
 	go run ./cmd/print-model/...
+
+.PHONY: print-possible-allocations
+print-possible-allocations:
+	go run ./cmd/print-possible-allocations/...
 
 .PHONY: generate-deepcopy
 generate-deepcopy:
@@ -48,4 +53,6 @@ generate-deepcopy:
 
 .PHONY: clean
 clean:
+	rm -f cmd/print-model/print-model
+	rm -f cmd/print-possible-allocations/print-possible-allocations
 	find . -name "zz_generated.*" | xargs rm -f

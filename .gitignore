@@ -10,6 +10,7 @@
 *.swp
 *.swo
 cmd/print-model/print-model
+cmd/print-possible-allocations/print-possible-allocations
 
 # Test binary, built with `go test -c`
 *.test

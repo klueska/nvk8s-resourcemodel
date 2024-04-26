@@ -20,7 +20,7 @@ func main() {
 	// devices from this mock server using standard NVML calls.
 	l := nvdevicelib.New(dgxa100.New())
 
-	// Get the full list of allocatable devices from the server.
+	// Get the full list of allocatable devices from GPU 0 on the server.
 	allocatable, err := l.GetPerGpuAllocatableDevices(0)
 	if err != nil {
 		klog.Fatalf("Error getAllocatableDevices: %v", err)
