@@ -58,13 +58,9 @@ func (g *NamedResourcesGroup) Add(other *NamedResourcesGroup) (bool, error) {
 		if _, exists := quantitiesMap[q.Name]; !exists {
 			return false, fmt.Errorf("missing %v", q.Name)
 		}
-		newValue := quantitiesMap[q.Name].Value.DeepCopy()
-		newValue.Add(*q.Value)
-		newQuantity := NamedResourcesQuantity{
-			Name:  q.Name,
-			Value: &newValue,
-		}
-		newQuantities = append(newQuantities, newQuantity)
+		newQuantity := quantitiesMap[q.Name].DeepCopy()
+		newQuantity.Value.Add(*q.Value)
+		newQuantities = append(newQuantities, *newQuantity)
 	}
 
 	var newIntSets []NamedResourcesIntSet
@@ -72,18 +68,14 @@ func (g *NamedResourcesGroup) Add(other *NamedResourcesGroup) (bool, error) {
 		if _, exists := intSetsMap[s.Name]; !exists {
 			return false, fmt.Errorf("missing %v", s.Name)
 		}
-		newItems := slices.Clone(intSetsMap[s.Name].Items)
+		newIntSet := intSetsMap[s.Name].DeepCopy()
 		for _, item := range s.Items {
-			if slices.Contains(newItems, item) {
+			if slices.Contains(newIntSet.Items, item) {
 				return false, fmt.Errorf("item already in %v: %v", s.Name, item)
 			}
-			newItems = append(newItems, item)
+			newIntSet.Items = append(newIntSet.Items, item)
 		}
-		newIntSet := NamedResourcesIntSet{
-			Name:  s.Name,
-			Items: newItems,
-		}
-		newIntSets = append(newIntSets, newIntSet)
+		newIntSets = append(newIntSets, *newIntSet)
 	}
 
 	g.Quantities = newQuantities
@@ -109,13 +101,9 @@ func (g *NamedResourcesGroup) Sub(other *NamedResourcesGroup) (bool, error) {
 		if quantitiesMap[q.Name].Value.Cmp(*q.Value) < 0 {
 			return false, nil
 		}
-		newValue := quantitiesMap[q.Name].Value.DeepCopy()
-		newValue.Sub(*q.Value)
-		newQuantity := NamedResourcesQuantity{
-			Name:  q.Name,
-			Value: &newValue,
-		}
-		newQuantities = append(newQuantities, newQuantity)
+		newQuantity := quantitiesMap[q.Name].DeepCopy()
+		newQuantity.Value.Sub(*q.Value)
+		newQuantities = append(newQuantities, *newQuantity)
 	}
 
 	var newIntSets []NamedResourcesIntSet
@@ -128,18 +116,16 @@ func (g *NamedResourcesGroup) Sub(other *NamedResourcesGroup) (bool, error) {
 				return false, nil
 			}
 		}
-		var newItems []int
+		var newInts []int
 		for _, item := range intSetsMap[s.Name].Items {
 			if slices.Contains(s.Items, item) {
 				continue
 			}
-			newItems = append(newItems, item)
+			newInts = append(newInts, item)
 		}
-		newIntSet := NamedResourcesIntSet{
-			Name:  s.Name,
-			Items: newItems,
-		}
-		newIntSets = append(newIntSets, newIntSet)
+		newIntSet := intSetsMap[s.Name].DeepCopy()
+		newIntSet.Items = newInts
+		newIntSets = append(newIntSets, *newIntSet)
 	}
 
 	g.Quantities = newQuantities
