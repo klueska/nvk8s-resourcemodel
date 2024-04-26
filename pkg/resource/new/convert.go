@@ -231,7 +231,7 @@ func (mig *MigInfo) getResources() NamedResourcesGroup {
 	for i := 0; i < int(mig.MemorySlices.Size); i++ {
 		memorySlices = append(memorySlices, int(mig.MemorySlices.Start)+i)
 	}
-	memorySlicesSet := NamedResourcesSet[int]{
+	memorySlicesSet := NamedResourcesIntSet{
 		Name:  "memory-slices",
 		Items: memorySlices,
 	}
@@ -239,7 +239,7 @@ func (mig *MigInfo) getResources() NamedResourcesGroup {
 	group := NamedResourcesGroup{
 		Name:       name,
 		Quantities: quantities,
-		IntSets:    []NamedResourcesSet[int]{memorySlicesSet},
+		IntSets:    []NamedResourcesIntSet{memorySlicesSet},
 	}
 
 	return group

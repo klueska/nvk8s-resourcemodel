@@ -17,20 +17,32 @@ type NamedResourcesQuantity struct {
 	// It must be a DNS subdomain.
 	Name string `json:"name" protobuf:"bytes,1,name=name"`
 
-	// Quantity is the actual quantity of resources.
+	// Value is the actual quantity of resources.
 	Value *resource.Quantity `json:"value" protobuf:"bytes,2,name=value"`
 }
 
-// NamedResourcesSet represents a named list of discrete resources of type T.
-type NamedResourcesSet[T comparable] struct {
+// NamedResourcesIntSet represents a named list of discrete integers.
+type NamedResourcesIntSet struct {
 	// Name is the name of the resource represented by this quantity.
 	// It must be a DNS subdomain.
 	Name string `json:"name" protobuf:"bytes,1,name=name"`
 
-	// Set is the actual set of resources of type T.
+	// Items is the actual set of ints.
 	//
-	// +listType=atomic
-	Items []T `json:"items" protobuf:"bytes,2,name=items"`
+	// +listType=set
+	Items []int `json:"items" protobuf:"bytes,2,name=items"`
+}
+
+// NamedResourcesStringSet represents a named list of discrete strings.
+type NamedResourcesStringSet struct {
+	// Name is the name of the resource represented by this quantity.
+	// It must be a DNS subdomain.
+	Name string `json:"name" protobuf:"bytes,1,name=name"`
+
+	// Items is the actual set of strings.
+	//
+	// +listType=set
+	Items []string `json:"items" protobuf:"bytes,2,name=items"`
 }
 
 // NamedResourcesNamedResourceGroup represents a named group of resources (quantites and sets).
@@ -51,14 +63,14 @@ type NamedResourcesGroup struct {
 	//
 	// +listType=atomic
 	// +optional
-	StringSets []NamedResourcesSet[string] `json:"stringSets,omitempty" protobuf:"bytes,3,opt,name=stringSets"`
+	StringSets []NamedResourcesStringSet `json:"stringSets,omitempty" protobuf:"bytes,3,opt,name=stringSets"`
 
 	// IntSets represents the list of all named resource sets that contains
 	// ints in the resource group.
 	//
 	// +listType=atomic
 	// +optional
-	IntSets []NamedResourcesSet[int] `json:"intSets,omitempty" protobuf:"bytes,4,opt,name=intSets"`
+	IntSets []NamedResourcesIntSet `json:"intSets,omitempty" protobuf:"bytes,4,opt,name=intSets"`
 }
 
 // ResourceModel must have one and only one field set.

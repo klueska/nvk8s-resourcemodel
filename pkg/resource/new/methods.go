@@ -24,8 +24,13 @@ func (q NamedResourcesQuantity) GetName() string {
 	return q.Name
 }
 
-// GetName returns the name of a NamedResourcesSet[T] to implement the namedType interface.
-func (s NamedResourcesSet[T]) GetName() string {
+// GetName returns the name of a NamedResourcesIntSet to implement the namedType interface.
+func (s NamedResourcesIntSet) GetName() string {
+	return s.Name
+}
+
+// GetName returns the name of a NamedResourcesStringSet to implement the namedType interface.
+func (s NamedResourcesStringSet) GetName() string {
 	return s.Name
 }
 
@@ -62,7 +67,7 @@ func (g *NamedResourcesGroup) Add(other *NamedResourcesGroup) (bool, error) {
 		newQuantities = append(newQuantities, newQuantity)
 	}
 
-	var newIntSets []NamedResourcesSet[int]
+	var newIntSets []NamedResourcesIntSet
 	for _, s := range other.IntSets {
 		if _, exists := intSetsMap[s.Name]; !exists {
 			return false, fmt.Errorf("missing %v", s.Name)
@@ -74,7 +79,7 @@ func (g *NamedResourcesGroup) Add(other *NamedResourcesGroup) (bool, error) {
 			}
 			newItems = append(newItems, item)
 		}
-		newIntSet := NamedResourcesSet[int]{
+		newIntSet := NamedResourcesIntSet{
 			Name:  s.Name,
 			Items: newItems,
 		}
@@ -113,7 +118,7 @@ func (g *NamedResourcesGroup) Sub(other *NamedResourcesGroup) (bool, error) {
 		newQuantities = append(newQuantities, newQuantity)
 	}
 
-	var newIntSets []NamedResourcesSet[int]
+	var newIntSets []NamedResourcesIntSet
 	for _, s := range other.IntSets {
 		if _, exists := intSetsMap[s.Name]; !exists {
 			return false, fmt.Errorf("missing %v", s.Name)
@@ -130,7 +135,7 @@ func (g *NamedResourcesGroup) Sub(other *NamedResourcesGroup) (bool, error) {
 			}
 			newItems = append(newItems, item)
 		}
-		newIntSet := NamedResourcesSet[int]{
+		newIntSet := NamedResourcesIntSet{
 			Name:  s.Name,
 			Items: newItems,
 		}
@@ -157,7 +162,7 @@ func (g *NamedResourcesGroup) addOrReplaceQuantityIfLarger(q *NamedResourcesQuan
 }
 
 // addOrReplaceIntSetIfLarger is an internal function to conditionally update IntSets in a NamedResourcesGroup.
-func (g *NamedResourcesGroup) addOrReplaceIntSetIfLarger(s *NamedResourcesSet[int]) {
+func (g *NamedResourcesGroup) addOrReplaceIntSetIfLarger(s *NamedResourcesIntSet) {
 	for i := range g.IntSets {
 		if s.Name == g.IntSets[i].Name {
 			for _, item := range s.Items {
@@ -169,4 +174,19 @@ func (g *NamedResourcesGroup) addOrReplaceIntSetIfLarger(s *NamedResourcesSet[in
 		}
 	}
 	g.IntSets = append(g.IntSets, *s)
+}
+
+// addOrReplaceStringSetIfLarger is an internal function to conditionally update StringSets in a NamedResourcesGroup.
+func (g *NamedResourcesGroup) addOrReplaceStringSetIfLarger(s *NamedResourcesStringSet) {
+	for i := range g.StringSets {
+		if s.Name == g.StringSets[i].Name {
+			for _, item := range s.Items {
+				if !slices.Contains(g.StringSets[i].Items, item) {
+					g.StringSets[i].Items = append(g.StringSets[i].Items, item)
+				}
+			}
+			return
+		}
+	}
+	g.StringSets = append(g.StringSets, *s)
 }
