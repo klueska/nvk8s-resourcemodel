@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
+	"github.com/klueska/nvk8s-resourcemodel/pkg/intrange"
 	nvdevicelib "github.com/klueska/nvk8s-resourcemodel/pkg/nvdevice"
 	currentresourceapi "github.com/klueska/nvk8s-resourcemodel/pkg/resource/current"
 )
@@ -105,8 +106,8 @@ func (devices AllocatableDevices) ToSharedLimits() NamedResourcesSharedResourceG
 			if item.QuantityValue != nil {
 				limits.addOrReplaceQuantityIfLarger(&item)
 			}
-			if item.IntSliceValue != nil {
-				limits.addOrReplaceIntSliceIfLarger(&item)
+			if item.IntRangeValue != nil {
+				limits.addOrReplaceIntRangeIfLarger(&item)
 			}
 		}
 	}
@@ -199,11 +200,6 @@ func (gpu *GpuInfo) getResources() NamedResourcesSharedResourceGroup {
 func (mig *MigInfo) getResources() NamedResourcesSharedResourceGroup {
 	name := fmt.Sprintf("gpu-%v-shared-resources", mig.Parent.Index)
 
-	var memorySlices []int64
-	for i := uint32(0); i < mig.MemorySlices.Size; i++ {
-		memorySlices = append(memorySlices, int64(mig.MemorySlices.Start+i))
-	}
-
 	info := mig.GIProfileInfo
 	resources := []NamedResourcesSharedResource{
 		{
@@ -251,7 +247,7 @@ func (mig *MigInfo) getResources() NamedResourcesSharedResourceGroup {
 		{
 			Name: "memory-slices",
 			NamedResourcesSharedResourceValue: NamedResourcesSharedResourceValue{
-				IntSliceValue: &NamedResourcesIntSlice{Ints: memorySlices},
+				IntRangeValue: intrange.NewIntRange(int64(mig.MemorySlices.Start), int64(mig.MemorySlices.Size)),
 			},
 		},
 	}

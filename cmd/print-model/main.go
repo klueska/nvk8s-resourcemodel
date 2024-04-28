@@ -52,7 +52,7 @@ func printCurrentResourceModel(allocatable nvdevicelib.PerGpuAllocatableDevices)
 	return nil
 }
 
-// printCurrentResourceModel prints the new structured resource model as yaml.
+// printNewResourceModel prints the new structured resource model as yaml.
 func printNewResourceModel(allocatable nvdevicelib.PerGpuAllocatableDevices) error {
 	model := newresourceapi.PerGpuAllocatableDevices(allocatable).ToNamedResourcesResourceModel()
 	modelYaml, err := yaml.Marshal(model)

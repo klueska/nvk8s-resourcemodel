@@ -69,11 +69,8 @@ scheduler to do intelligent allocation to avoid fragmentation.
 +	// QuantityValue is a quantity.
 +	QuantityValue *resource.Quantity `json:"quantity,omitempty" protobuf:"bytes,1,opt,name=quantity"`
 +
-+	// IntSliceValue is an array of 64-bit integers.
-+	IntSliceValue *NamedResourcesIntSlice `json:"intSlice,omitempty" protobuf:"varint,2,rep,name=intSlice"`
-+
-+	// StringSliceValue is an array of strings.
-+	StringSliceValue *NamedResourcesStringSlice `json:"stringSlice,omitempty" protobuf:"bytes,3,rep,name=stringSlice"`
++	// IntRangeValue is a range of 64-bit integers.
++	IntRangeValue *intrange.IntRange `json:"intRange,omitempty" protobuf:"varint,2,rep,name=intRange"`
 +}
 +
 +// NamedResourcesSharedResourceGroup represents a named group of shared resources.
@@ -154,7 +151,7 @@ namedResources:
     - int: 0
       name: index
     - name: uuid
-      string: GPU-358ad531-0acf-4708-81d3-0538fb332536
+      string: GPU-46a3c1c9-604b-4acd-8fed-35724140fc17
     - name: memory
       quantity: 40Gi
     - name: product-name
@@ -184,7 +181,7 @@ namedResources:
     - int: 0
       name: index
     - name: uuid
-      string: GPU-358ad531-0acf-4708-81d3-0538fb332536
+      string: GPU-46a3c1c9-604b-4acd-8fed-35724140fc17
     - name: product-name
       string: Mock NVIDIA A100-SXM4-40GB
     - name: brand
@@ -239,9 +236,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 0
+      - intRange: "0"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -276,9 +271,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 1
+      - intRange: "1"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -313,9 +306,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 2
+      - intRange: "2"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -350,9 +341,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 3
+      - intRange: "3"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -387,9 +376,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 4
+      - intRange: "4"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -424,9 +411,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 5
+      - intRange: "5"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -461,9 +446,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 6
+      - intRange: "6"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -498,10 +481,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 9856Mi
-      - intSlice:
-          ints:
-          - 0
-          - 1
+      - intRange: 0-1
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -536,10 +516,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 9856Mi
-      - intSlice:
-          ints:
-          - 2
-          - 3
+      - intRange: 2-3
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -574,10 +551,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 9856Mi
-      - intSlice:
-          ints:
-          - 4
-          - 5
+      - intRange: 4-5
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -612,12 +586,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 19968Mi
-      - intSlice:
-          ints:
-          - 0
-          - 1
-          - 2
-          - 3
+      - intRange: 0-3
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -652,12 +621,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 19968Mi
-      - intSlice:
-          ints:
-          - 4
-          - 5
-          - 6
-          - 7
+      - intRange: 4-7
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -692,12 +656,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 19968Mi
-      - intSlice:
-          ints:
-          - 0
-          - 1
-          - 2
-          - 3
+      - intRange: 0-3
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -732,16 +691,7 @@ namedResources:
         quantity: "1"
       - name: memory
         quantity: 40192Mi
-      - intSlice:
-          ints:
-          - 0
-          - 1
-          - 2
-          - 3
-          - 4
-          - 5
-          - 6
-          - 7
+      - intRange: 0-7
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -776,9 +726,7 @@ namedResources:
         quantity: "1"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 0
+      - intRange: "0"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -813,9 +761,7 @@ namedResources:
         quantity: "1"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 1
+      - intRange: "1"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -850,9 +796,7 @@ namedResources:
         quantity: "1"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 2
+      - intRange: "2"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -887,9 +831,7 @@ namedResources:
         quantity: "1"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 3
+      - intRange: "3"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -924,9 +866,7 @@ namedResources:
         quantity: "1"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 4
+      - intRange: "4"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -961,9 +901,7 @@ namedResources:
         quantity: "1"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 5
+      - intRange: "5"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -998,9 +936,7 @@ namedResources:
         quantity: "1"
       - name: memory
         quantity: 4864Mi
-      - intSlice:
-          ints:
-          - 6
+      - intRange: "6"
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -1035,10 +971,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 9856Mi
-      - intSlice:
-          ints:
-          - 0
-          - 1
+      - intRange: 0-1
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -1073,10 +1006,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 9856Mi
-      - intSlice:
-          ints:
-          - 2
-          - 3
+      - intRange: 2-3
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -1111,10 +1041,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 9856Mi
-      - intSlice:
-          ints:
-          - 4
-          - 5
+      - intRange: 4-5
         name: memory-slices
       name: gpu-0-shared-resources
   - attributes:
@@ -1149,10 +1076,7 @@ namedResources:
         quantity: "0"
       - name: memory
         quantity: 9856Mi
-      - intSlice:
-          ints:
-          - 6
-          - 7
+      - intRange: 6-7
         name: memory-slices
       name: gpu-0-shared-resources
   sharedLimits:
@@ -1171,16 +1095,7 @@ namedResources:
       quantity: "1"
     - name: ofa-engines
       quantity: "1"
-    - intSlice:
-        ints:
-        - 0
-        - 1
-        - 2
-        - 3
-        - 4
-        - 5
-        - 6
-        - 7
+    - intRange: 0-7
       name: memory-slices
     name: gpu-0-shared-resources
 ```

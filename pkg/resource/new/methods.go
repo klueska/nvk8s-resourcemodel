@@ -2,7 +2,6 @@ package resource
 
 import (
 	"fmt"
-	"slices"
 )
 
 // namedType is an internal interface to help with creating a generic toMap() function.
@@ -61,16 +60,11 @@ func (g *NamedResourcesSharedResourceGroup) Add(other *NamedResourcesSharedResou
 			}
 			newItems[name].QuantityValue.Add(*item.QuantityValue)
 		}
-		if item.IntSliceValue != nil {
-			if newItems[name].IntSliceValue == nil {
+		if item.IntRangeValue != nil {
+			if newItems[name].IntRangeValue == nil {
 				return false, fmt.Errorf("mismatched types for %v", name)
 			}
-			for _, i := range item.IntSliceValue.Ints {
-				if slices.Contains(newItems[name].IntSliceValue.Ints, i) {
-					return false, fmt.Errorf("item already in %v: %v", name, i)
-				}
-				newItems[name].IntSliceValue.Ints = append(newItems[name].IntSliceValue.Ints, i)
-			}
+			newItems[name].IntRangeValue = newItems[name].IntRangeValue.Union(item.IntRangeValue)
 		}
 	}
 	g.Items = toList(newItems)
@@ -99,23 +93,14 @@ func (g *NamedResourcesSharedResourceGroup) Sub(other *NamedResourcesSharedResou
 			}
 			newItems[name].QuantityValue.Sub(*item.QuantityValue)
 		}
-		if item.IntSliceValue != nil {
-			if newItems[name].IntSliceValue == nil {
+		if item.IntRangeValue != nil {
+			if newItems[name].IntRangeValue == nil {
 				return false, fmt.Errorf("mismatched types for %v", name)
 			}
-			for _, i := range item.IntSliceValue.Ints {
-				if !slices.Contains(newItems[name].IntSliceValue.Ints, i) {
-					return false, nil
-				}
+			if !newItems[name].IntRangeValue.Contains(item.IntRangeValue) {
+				return false, nil
 			}
-			var newInts []int64
-			for _, i := range newItems[name].IntSliceValue.Ints {
-				if slices.Contains(item.IntSliceValue.Ints, i) {
-					continue
-				}
-				newInts = append(newInts, i)
-			}
-			newItems[name].IntSliceValue.Ints = newInts
+			newItems[name].IntRangeValue = newItems[name].IntRangeValue.Difference(item.IntRangeValue)
 		}
 	}
 	g.Items = toList(newItems)
@@ -136,26 +121,11 @@ func (g *NamedResourcesSharedResourceGroup) addOrReplaceQuantityIfLarger(r *Name
 	g.Items = append(g.Items, *r)
 }
 
-// addOrReplaceIntSliceIfLarger is an internal function to conditionally update IntSlices in a NamedResourcesSharedResourceGroup.
-func (g *NamedResourcesSharedResourceGroup) addOrReplaceIntSliceIfLarger(r *NamedResourcesSharedResource) {
+// addOrReplaceIntRangeIfLarger is an internal function to conditionally update IntSlices in a NamedResourcesSharedResourceGroup.
+func (g *NamedResourcesSharedResourceGroup) addOrReplaceIntRangeIfLarger(r *NamedResourcesSharedResource) {
 	for i := range g.Items {
 		if r.Name == g.Items[i].Name {
-			newInts := slices.Concat(g.Items[i].IntSliceValue.Ints, r.IntSliceValue.Ints)
-			slices.Sort(newInts)
-			g.Items[i].IntSliceValue.Ints = slices.Compact(newInts)
-			return
-		}
-	}
-	g.Items = append(g.Items, *r)
-}
-
-// addOrReplaceStringSliceIfLarger is an internal function to conditionally update StringSlices in a NamedResourcesSharedResourceGroup.
-func (g *NamedResourcesSharedResourceGroup) addOrReplaceStringSliceIfLarger(r *NamedResourcesSharedResource) {
-	for i := range g.Items {
-		if r.Name == g.Items[i].Name {
-			newStrings := slices.Concat(g.Items[i].StringSliceValue.Strings, r.StringSliceValue.Strings)
-			slices.Sort(newStrings)
-			g.Items[i].StringSliceValue.Strings = slices.Compact(newStrings)
+			g.Items[i].IntRangeValue = g.Items[i].IntRangeValue.Union(r.IntRangeValue)
 			return
 		}
 	}

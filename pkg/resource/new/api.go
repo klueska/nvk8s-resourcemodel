@@ -3,6 +3,8 @@ package resource
 import (
 	resourceapi "k8s.io/api/resource/v1alpha2"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	"github.com/klueska/nvk8s-resourcemodel/pkg/intrange"
 )
 
 // NamedResourcesAttribute is an alias of resourceapi.NamedResourcesAttribute
@@ -10,12 +12,6 @@ type NamedResourcesAttribute = resourceapi.NamedResourcesAttribute
 
 // NamedResourcesAttributeValue is an alias of resourceapi.NamedResourcesAttributeValue
 type NamedResourcesAttributeValue = resourceapi.NamedResourcesAttributeValue
-
-// NamedResourcesIntSlice is an alias of resourceapi.NamedResourcesIntSlice
-type NamedResourcesIntSlice = resourceapi.NamedResourcesIntSlice
-
-// NamedResourcesStringSlice is an alias of resourceapi.NamedResourcesStringSlice
-type NamedResourcesStringSlice = resourceapi.NamedResourcesStringSlice
 
 // NamedResourcesSharedResource represents a shared resource that is consumable by a top-level resource when allocated.
 // +k8s:deepcopy-gen=true
@@ -35,11 +31,8 @@ type NamedResourcesSharedResourceValue struct {
 	// QuantityValue is a quantity.
 	QuantityValue *resource.Quantity `json:"quantity,omitempty" protobuf:"bytes,1,opt,name=quantity"`
 
-	// IntSliceValue is an array of 64-bit integers.
-	IntSliceValue *NamedResourcesIntSlice `json:"intSlice,omitempty" protobuf:"varint,2,rep,name=intSlice"`
-
-	// StringSliceValue is an array of strings.
-	StringSliceValue *NamedResourcesStringSlice `json:"stringSlice,omitempty" protobuf:"bytes,3,rep,name=stringSlice"`
+	// IntRangeValue is a range of 64-bit integers.
+	IntRangeValue *intrange.IntRange `json:"intRange,omitempty" protobuf:"varint,2,rep,name=intRange"`
 }
 
 // NamedResourcesSharedResourceGroup represents a named group of shared resources.

@@ -21,6 +21,7 @@
 package resource
 
 import (
+	"github.com/klueska/nvk8s-resourcemodel/pkg/intrange"
 	"k8s.io/api/resource/v1alpha2"
 )
 
@@ -128,14 +129,9 @@ func (in *NamedResourcesSharedResourceValue) DeepCopyInto(out *NamedResourcesSha
 		x := (*in).DeepCopy()
 		*out = &x
 	}
-	if in.IntSliceValue != nil {
-		in, out := &in.IntSliceValue, &out.IntSliceValue
-		*out = new(v1alpha2.NamedResourcesIntSlice)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.StringSliceValue != nil {
-		in, out := &in.StringSliceValue, &out.StringSliceValue
-		*out = new(v1alpha2.NamedResourcesStringSlice)
+	if in.IntRangeValue != nil {
+		in, out := &in.IntRangeValue, &out.IntRangeValue
+		*out = new(intrange.IntRange)
 		(*in).DeepCopyInto(*out)
 	}
 }
